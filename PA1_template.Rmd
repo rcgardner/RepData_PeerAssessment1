@@ -1,25 +1,111 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_Template.Rmd"
+author: "Bob Gardner"
+date: "March 25, 2016"
+output:
+  html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## Course Project 1:  Reproducible Research
+
+### Loading and Preprocessing the Data
+Read in files and transform as will be needed downstream.
+
+```{r loadtransform}
+activity<-read.csv("activity.csv")
+activity$date<-as.Date(activity$date)
+```
+
+### What is mean total number of steps taken per day?
+
+Calculate the total number of steps for each day, plot in histogram, and mean/median.
+
+```{r daysteps}
+dailySums<-tapply(activity$steps,activity$date,sum)
+hist(dailySums,breaks=11, main = "Total Number of Steps Each Day", xlab="Number of Steps in a Day")
+avg<-as.integer(mean(dailySums,na.rm=TRUE))
+med<-median(dailySums,na.rm=TRUE)
+```
+
+The mean of the total number of steps taken per day is `r avg` steps.
+
+The median of the total number of steps taken per day is `r med` steps.
+
+### What is the average daily activity pattern?
+
+Prepare and plot time series of 5-minute intervals averaged across days and find max average steps interval.
+
+```{r intervalavgs}
+dailyAvg<-tapply(activity$steps,activity$interval,mean,na.rm=TRUE)
+plot(row.names(dailyAvg),dailyAvg,type="l", ylab = "number of steps per 5 minute interval", xlab = "5 minute interval during the 24 hour day")
+max<-names(which.max(dailyAvg))
+```
+
+The 5-minute interval, on average across all the days in the dataset, which contains the maximum number of steps is `r max`.
+
+### Imputing missing values
+
+Calculate the number of missing values in the dataset and prepare new dataset with NAs replaced with interval means.
+
+```{r impute}
+NACount<-sum(is.na(activity$steps))
+imputeNA<-numeric()
+dailyAvg<-aggregate(steps ~ interval, data = activity, FUN = mean)
+for (i in 1:nrow(activity)){
+	obs<-activity[i,]
+	if (is.na(obs$steps)){
+		steps<-subset(dailyAvg, interval == obs$interval)$steps
+	} else {
+		steps<-obs$steps
+	}
+	imputeNA<-c(imputeNA,steps)
+}
+activity2.0<-activity
+activity2.0$steps<-imputeNA
+dailySums2.0<-tapply(activity2.0$steps,activity2.0$date,sum)
+hist(dailySums2.0,breaks=11, main = "Total Number of Steps Each Day, Imputed", xlab="Number of Steps in a Day")
+avg2.0<-as.integer(mean(dailySums2.0))
+med2.0<-as.integer(median(dailySums2.0))
+```
+
+The calculated total number of missing values in the dataset is `r NACount`.
+
+The mean using imputed means to replace NAs of the total number of steps taken per day is `r avg2.0` steps.
+
+The median using imputed means to replace NAs of the total number of steps taken per day is `r med2.0` steps.
+
+**There is no difference between the imputed estimates from the first part of the assignment.**
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+Create new factor variable in imputed dataset by weekend and weekday and panel plot.
+
+```{r}
+days<-weekdays(activity$date, abbreviate = FALSE)
+dayLevel<-vector()
+for (i in 1:nrow(activity2.0)){
+	if (days[i] == "Saturday") {
+		dayLevel[i]<-"weekend"
+	} else if (days[i] == "Sunday") {
+		dayLevel[i]<-"weekend"
+	} else {
+		dayLevel[i]<-"weekday"
+	}
+}
+activity2.0$dayLevel<-dayLevel
+activity2.0$dayLevel<-factor(activity2.0$dayLevel)
+dayTypeSteps<-aggregate(steps ~ interval + dayLevel, data = activity2.0, mean)
+require(lattice)
+xyplot(steps ~ interval|dayLevel,dayTypeSteps, type = "l", layout = c(1,2), xlab = "interval", ylab = "Number of Steps by Interval, Average")
+```
+
+When comparing the weekend to the weekday averages, the subject is less active until later in the morning, more active throughout the day, and remains active later into the evening.
 
 
 
-## What is mean total number of steps taken per day?
 
 
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
